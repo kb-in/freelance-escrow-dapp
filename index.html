@@ -6,13 +6,6 @@
   <title>FreelanceEscrow · GenLayer dApp</title>
 
   <!-- genlayer-js from CDN (ESM via skypack/jsdelivr shim) -->
-  <script type="importmap">
-    {
-      "imports": {
-        "genlayer-js": "https://cdn.jsdelivr.net/npm/genlayer-js@latest/dist/index.mjs"
-      }
-    }
-  </script>
 
   <style>
     /* ── Fonts ──────────────────────────────────────────── */
@@ -634,7 +627,7 @@
     // Attempt dynamic import of genlayer-js
     // Handles both CDN (importmap) and bundled scenarios
     try {
-      const mod = await import('genlayer-js');
+ const mod = await import('https://cdn.jsdelivr.net/npm/genlayer-js/dist/index.mjs');
       const createClient = mod.createClient || mod.default?.createClient;
 
       if (!createClient) throw new Error('createClient not found in genlayer-js module');
