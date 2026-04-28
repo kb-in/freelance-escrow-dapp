@@ -6,6 +6,13 @@
   <title>FreelanceEscrow · GenLayer dApp</title>
 
   <!-- genlayer-js from CDN (ESM via skypack/jsdelivr shim) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "genlayer-js": "https://cdn.jsdelivr.net/npm/genlayer-js@latest/dist/index.mjs"
+      }
+    }
+  </script>
 
   <style>
     /* ── Fonts ──────────────────────────────────────────── */
@@ -516,7 +523,7 @@
       <!-- Accept Job -->
       <div class="field-label">Become Freelancer</div>
       <button class="btn btn-green" onclick="acceptJob()">
-        ▶ Accept Job
+        ▶️ Accept Job
       </button>
       <p style="font-size:11px; color:var(--dim); margin-top:8px;">
         Calls <code style="color:var(--green);">accept_job()</code> — sets you as the freelancer, status → in_progress
@@ -627,7 +634,7 @@
     // Attempt dynamic import of genlayer-js
     // Handles both CDN (importmap) and bundled scenarios
     try {
- const mod = await import('https://cdn.jsdelivr.net/npm/genlayer-js/dist/index.mjs');
+      const mod = await import('genlayer-js');
       const createClient = mod.createClient || mod.default?.createClient;
 
       if (!createClient) throw new Error('createClient not found in genlayer-js module');
@@ -670,7 +677,7 @@
       args,
     });
 
-    log(`Tx sent ↗ hash: ${hash}`, 'ok');
+    log(`Tx sent ↗️ hash: ${hash}`, 'ok');
 
     // Show hash bar
     const hashEl = document.getElementById('lastTxHash');
@@ -694,122 +701,4 @@
 
       // Read all fields in parallel
       const [status, verdict, title, reasoning] = await Promise.all([
-        readContract('get_status').catch(() => null),
-        readContract('get_verdict').catch(() => null),
-        readContract('get_job_title').catch(() => null),
-        readContract('get_ai_reasoning').catch(() => null),
-      ]);
-
-      // Status
-      const statusEl = document.getElementById('displayStatus');
-      if (status) {
-        statusEl.textContent = status;
-        statusEl.className = 'stat-value status-' + status.replace(/\s/g, '_');
-      } else {
-        // Fallback: try direct property read
-        statusEl.innerHTML = '<span class="empty-value">N/A</span>';
-      }
-
-      // Verdict
-      const verdictEl = document.getElementById('displayVerdict');
-      if (verdict && verdict !== '') {
-        verdictEl.textContent = verdict;
-        verdictEl.className = 'stat-value verdict-' + verdict.toLowerCase();
-      } else {
-        verdictEl.innerHTML = '<span class="empty-value">Pending</span>';
-      }
-
-      // Title
-      const titleEl = document.getElementById('displayTitle');
-      titleEl.textContent = title || '—';
-
-      // Reasoning
-      const reasonEl = document.getElementById('displayReasoning');
-      if (reasoning && reasoning !== '') {
-        reasonEl.textContent = reasoning;
-      } else {
-        reasonEl.innerHTML = '<span class="empty-value">Not evaluated yet</span>';
-      }
-
-      log('State refreshed ✓', 'ok');
-    } catch (err) {
-      log('Error reading state: ' + err.message, 'err');
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // EXPOSED ACTIONS (called from HTML onclick)
-  // ─────────────────────────────────────────────────────────
-
-  window.loadContract = async function () {
-    const addrInput = document.getElementById('contractAddress').value.trim();
-    if (!addrInput) {
-      log('Please enter a contract address.', 'err');
-      return;
-    }
-
-    contractAddress = addrInput;
-    log(`Loading contract at ${contractAddress}…`, 'info');
-
-    try {
-      await getClient();
-      await refreshState();
-
-      // Show info section and enable actions
-      document.getElementById('contractInfo').style.display = 'block';
-      document.getElementById('actionsPanel').style.opacity = '1';
-      document.getElementById('actionsPanel').style.pointerEvents = 'auto';
-      log('Contract loaded successfully ✓', 'ok');
-    } catch (err) {
-      log('Failed to load contract: ' + err.message, 'err');
-    }
-  };
-
-  window.refreshState = refreshState;
-
-  window.acceptJob = async function () {
-    if (!contractAddress) return;
-    try {
-      log('Calling accept_job()…', 'info');
-      await writeContract('accept_job');
-      await refreshState();
-    } catch (err) {
-      log('accept_job failed: ' + err.message, 'err');
-    }
-  };
-
-  window.submitWork = async function () {
-    const proof = document.getElementById('proofInput').value.trim();
-    if (!proof || proof.length < 6) {
-      log('Proof of work must be at least 6 characters.', 'err');
-      return;
-    }
-    if (!contractAddress) return;
-    try {
-      log('Calling submit_work()…', 'info');
-      await writeContract('submit_work', [proof]);
-      await refreshState();
-    } catch (err) {
-      log('submit_work failed: ' + err.message, 'err');
-    }
-  };
-
-  window.evaluate = async function () {
-    if (!contractAddress) return;
-    try {
-      log('Calling evaluate() — AI is reasoning about the proof…', 'info');
-      log('This may take 10-30s on testnet.', 'warn');
-      await writeContract('evaluate');
-      await refreshState();
-    } catch (err) {
-      log('evaluate failed: ' + err.message, 'err');
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────
-  // Boot
-  // ─────────────────────────────────────────────────────────
-  log('Interface ready · enter contract address above ↑', 'info');
-</script>
-</body>
-</html>
+        readContract('get_status'
