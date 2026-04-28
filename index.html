@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FreelanceEscrow · GenLayer dApp</title>
+
+  <!-- genlayer-js from CDN (ESM via skypack/jsdelivr shim) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "genlayer-js": "https://cdn.jsdelivr.net/npm/genlayer-js@latest/dist/index.mjs"
+      }
+    }
+  </script>
+
+  <style>
+    /* ── Fonts ──────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+    /* ── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #060810;
+      --surface:   #0c1020;
+      --border:    #1a2540;
+      --green:     #00ff88;
+      --cyan:      #00d4ff;
+      --amber:     #ffb800;
+      --red:       #ff4466;
+      --muted:     #3a4a6a;
+      --text:      #c8d8f0;
+      --dim:       #5a6a8a;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-head: 'Orbitron', sans-serif;
+      --glow-g:    0 0 8px #00ff8866, 0 0 24px #00ff8833;
+      --glow-c:    0 0 8px #00d4ff66, 0 0 24px #00d4ff33;
+      --glow-a:    0 0 8px #ffb80066, 0 0 24px #ffb80033;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Scanline overlay ───────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.08) 2px,
+        rgba(0,0,0,.08) 4px
+      );
+    }
+
+    /* ── Grid background ────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+
+    .logo-line {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      border: 2px solid var(--cyan);
+      border-radius: 6px;
+      display: grid; place-items: center;
+      font-size: 18px;
+      box-shadow: var(--glow-c);
+      animation: pulse-border 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: var(--glow-c); }
+      50%       { box-shadow: 0 0 16px #00d4ffaa, 0 0 40px #00d4ff44; }
+    }
+
+    h1 {
+      font-family: var(--font-head);
+      font-size: clamp(18px, 4vw, 28px);
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      padding: 4px 12px;
+      background: rgba(0,255,136,.06);
+      border: 1px solid rgba(0,255,136,.2);
+      border-radius: 20px;
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 2px;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: var(--glow-g);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+
+    /* ── Panels ─────────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      transition: border-color .3s;
+    }
+
+    .panel:hover { border-color: var(--muted); }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+    }
+
+    .panel-number {
+      font-family: var(--font-head);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--cyan);
+      opacity: .6;
+      letter-spacing: 2px;
+    }
+
+    .panel-title {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .panel-body { padding: 24px 20px; }
+
+    /* ── Input row ──────────────────────────────────────── */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"], textarea {
+      flex: 1;
+      min-width: 0;
+      background: #080e1c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px rgba(0,212,255,.12);
+    }
+
+    input[type="text"]::placeholder, textarea::placeholder {
+      color: var(--muted);
+    }
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      padding: 10px 22px;
+      border-radius: 6px;
+      border: 1px solid;
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+
+    .btn:active::after { opacity: .06; }
+
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .btn-cyan {
+      background: rgba(0,212,255,.1);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .btn-cyan:hover:not(:disabled) {
+      background: rgba(0,212,255,.18);
+      box-shadow: var(--glow-c);
+    }
+
+    .btn-green {
+      background: rgba(0,255,136,.1);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .btn-green:hover:not(:disabled) {
+      background: rgba(0,255,136,.18);
+      box-shadow: var(--glow-g);
+    }
+
+    .btn-amber {
+      background: rgba(255,184,0,.1);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .btn-amber:hover:not(:disabled) {
+      background: rgba(255,184,0,.18);
+      box-shadow: var(--glow-a);
+    }
+
+    .btn-red {
+      background: rgba(255,68,102,.1);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .btn-red:hover:not(:disabled) {
+      background: rgba(255,68,102,.18);
+      box-shadow: 0 0 8px #ff446666;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .field-group { margin-top: 16px; }
+
+    /* ── Status display ─────────────────────────────────── */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .stat-value.status-open        { color: var(--cyan); }
+    .stat-value.status-in_progress { color: var(--amber); }
+    .stat-value.status-submitted   { color: #aa88ff; }
+    .stat-value.status-completed   { color: var(--green); }
+    .stat-value.status-disputed    { color: var(--red); }
+    .stat-value.verdict-approved   { color: var(--green); }
+    .stat-value.verdict-rejected   { color: var(--red); }
+
+    .empty-value {
+      color: var(--muted);
+      font-style: italic;
+      font-size: 12px;
+    }
+
+    /* ── Log / output ───────────────────────────────────── */
+    .log-box {
+      background: #04080f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.7;
+      min-height: 120px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .log-box::-webkit-scrollbar { width: 4px; }
+    .log-box::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
+
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 4px;
+      animation: fadeIn .3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .log-ts { color: var(--muted); flex-shrink: 0; }
+
+    .log-ok   { color: var(--green); }
+    .log-err  { color: var(--red); }
+    .log-info { color: var(--cyan); }
+    .log-warn { color: var(--amber); }
+
+    .log-empty { color: var(--muted); font-style: italic; }
+
+    /* ── Spinner ────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Hash display ───────────────────────────────────── */
+    .hash {
+      font-size: 11px;
+      color: var(--dim);
+      word-break: break-all;
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,.02);
+      border-radius: 4px;
+      border-left: 2px solid var(--cyan);
+      display: none;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .btn { padding: 10px 16px; font-size: 10px; }
+      .panel-body { padding: 18px 14px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo-line">
+      <div class="logo-icon">⬡</div>
+      <h1>FreelanceEscrow</h1>
+    </div>
+    <p class="subtitle">GenLayer Intelligent Contract · dApp Interface</p>
+    <div class="network-badge">
+      <span class="dot"></span>
+      TESTNET
+    </div>
+  </header>
+
+  <!-- ── Panel 1: Contract Info ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-number">01</span>
+      <span class="panel-title">Contract Connection</span>
+    </div>
+    <div class="panel-body">
+      <div class="field-label">Contract Address</div>
+      <div class="input-row">
+        <input
+          type="text"
+          id="contractAddress"
+          placeholder="0x…"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <button class="btn btn-cyan" id="loadBtn" onclick="loadContract()">
+          Load Contract
+        </button>
+      </div>
+
+      <div id="contractInfo" style="margin-top:20px; display:none;">
+        <div class="field-label" style="margin-bottom:12px;">Contract State</div>
+        <div class="status-grid">
+          <div class="stat-card">
+            <div class="stat-label">Status</div>
+            <div class="stat-value" id="displayStatus"><span class="empty-value">—</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">AI Verdict</div>
+            <div class="stat-value" id="displayVerdict"><span class="empty-value">—</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Job Title</div>
+            <div class="stat-value" id="displayTitle"><span class="empty-value">—</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">AI Reasoning</div>
+            <div class="stat-value" id="displayReasoning" style="font-size:12px;"><span class="empty-value">—</span></div>
+          </div>
+        </div>
+        <button class="btn btn-cyan" style="margin-top:16px; font-size:10px;" onclick="refreshState()">
+          ↻ Refresh State
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel 2: Actions ── -->
+  <div class="panel" id="actionsPanel" style="opacity:.4; pointer-events:none;">
+    <div class="panel-header">
+      <span class="panel-number">02</span>
+      <span class="panel-title">Contract Actions</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Accept Job -->
+      <div class="field-label">Become Freelancer</div>
+      <button class="btn btn-green" onclick="acceptJob()">
+        ▶ Accept Job
+      </button>
+      <p style="font-size:11px; color:var(--dim); margin-top:8px;">
+        Calls <code style="color:var(--green);">accept_job()</code> — sets you as the freelancer, status → in_progress
+      </p>
+
+      <!-- Submit Work -->
+      <div class="field-group">
+        <div class="field-label">Submit Proof of Work</div>
+        <textarea
+          id="proofInput"
+          placeholder="Describe your completed work in detail… (must be > 5 characters)"
+        ></textarea>
+        <button class="btn btn-amber" style="margin-top:10px;" onclick="submitWork()">
+          ✦ Submit Work
+        </button>
+        <p style="font-size:11px; color:var(--dim); margin-top:8px;">
+          Calls <code style="color:var(--amber);">submit_work(proof)</code> — status → submitted
+        </p>
+      </div>
+
+      <!-- Evaluate -->
+      <div class="field-group">
+        <div class="field-label">Trigger AI Evaluation</div>
+        <button class="btn btn-red" onclick="evaluate()">
+          ✦ Evaluate
+        </button>
+        <p style="font-size:11px; color:var(--dim); margin-top:8px;">
+          Calls <code style="color:var(--red);">evaluate()</code> — AI reads proof vs acceptance criteria, renders verdict
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Panel 3: Output Log ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-number">03</span>
+      <span class="panel-title">Transaction Log</span>
+    </div>
+    <div class="panel-body">
+      <div class="log-box" id="logBox">
+        <div class="log-entry">
+          <span class="log-ts">[--:--:--]</span>
+          <span class="log-empty">Waiting for activity…</span>
+        </div>
+      </div>
+      <div class="hash" id="lastTxHash"></div>
+      <button class="btn btn-cyan" style="margin-top:12px; font-size:10px; opacity:.6;" onclick="clearLog()">
+        Clear Log
+      </button>
+    </div>
+  </div>
+
+  <footer>
+    GenLayer Intelligent Contracts · Tutorial dApp · genlayer-js
+  </footer>
+
+</div>
+
+<!-- ── JavaScript ── -->
+<script type="module">
+  // ─────────────────────────────────────────────────────────
+  // CONFIG
+  // ─────────────────────────────────────────────────────────
+  //
+  // genlayer-js CDN note:
+  // If the importmap CDN doesn't resolve in your env, swap to:
+  //   import { createClient } from "https://cdn.jsdelivr.net/npm/genlayer-js/dist/index.mjs"
+  //
+  // For Vercel deploy, you can also:
+  //   npm install genlayer-js  → bundle with esbuild/vite
+
+  let client = null;
+  let contractAddress = null;
+
+  // ─────────────────────────────────────────────────────────
+  // Logging helpers
+  // ─────────────────────────────────────────────────────────
+  function ts() {
+    return new Date().toLocaleTimeString('en-US', { hour12: false });
+  }
+
+  function log(msg, type = 'info') {
+    const box = document.getElementById('logBox');
+    // Remove placeholder on first real log
+    if (box.querySelector('.log-empty')) box.innerHTML = '';
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-ts">[${ts()}]</span><span class="log-${type}">${msg}</span>`;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  window.clearLog = function () {
+    document.getElementById('logBox').innerHTML =
+      '<div class="log-entry"><span class="log-ts">[--:--:--]</span><span class="log-empty">Log cleared…</span></div>';
+    document.getElementById('lastTxHash').style.display = 'none';
+  };
+
+  // ─────────────────────────────────────────────────────────
+  // Init genlayer client
+  // ─────────────────────────────────────────────────────────
+  async function getClient() {
+    if (client) return client;
+
+    // Attempt dynamic import of genlayer-js
+    // Handles both CDN (importmap) and bundled scenarios
+    try {
+      const mod = await import('genlayer-js');
+      const createClient = mod.createClient || mod.default?.createClient;
+
+      if (!createClient) throw new Error('createClient not found in genlayer-js module');
+
+      client = createClient({ network: 'testnet' });
+      log('genlayer-js client initialized · testnet', 'ok');
+      return client;
+
+    } catch (err) {
+      log('Failed to load genlayer-js: ' + err.message, 'err');
+      log('Tip: Run a local server or bundle with Vite. See README.', 'warn');
+      throw err;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Read helpers
+  // ─────────────────────────────────────────────────────────
+  async function readContract(method, args = []) {
+    const c = await getClient();
+    const result = await c.readContract({
+      address: contractAddress,
+      functionName: method,
+      args,
+    });
+    return result;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Write helpers
+  // ─────────────────────────────────────────────────────────
+  async function writeContract(method, args = []) {
+    const c = await getClient();
+
+    log(`Sending tx: <b>${method}(${args.map(a => JSON.stringify(a)).join(', ')})</b>`, 'info');
+
+    const hash = await c.writeContract({
+      address: contractAddress,
+      functionName: method,
+      args,
+    });
+
+    log(`Tx sent ↗ hash: ${hash}`, 'ok');
+
+    // Show hash bar
+    const hashEl = document.getElementById('lastTxHash');
+    hashEl.textContent = '🔗 Last tx: ' + hash;
+    hashEl.style.display = 'block';
+
+    // Wait for receipt
+    log('Waiting for transaction receipt…', 'warn');
+    const receipt = await c.waitForTransactionReceipt({ hash });
+    log(`Receipt received · status: ${receipt.status ?? 'ok'}`, 'ok');
+
+    return receipt;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // UI state refresh
+  // ─────────────────────────────────────────────────────────
+  async function refreshState() {
+    try {
+      log('Reading contract state…', 'info');
+
+      // Read all fields in parallel
+      const [status, verdict, title, reasoning] = await Promise.all([
+        readContract('get_status').catch(() => null),
+        readContract('get_verdict').catch(() => null),
+        readContract('get_job_title').catch(() => null),
+        readContract('get_ai_reasoning').catch(() => null),
+      ]);
+
+      // Status
+      const statusEl = document.getElementById('displayStatus');
+      if (status) {
+        statusEl.textContent = status;
+        statusEl.className = 'stat-value status-' + status.replace(/\s/g, '_');
+      } else {
+        // Fallback: try direct property read
+        statusEl.innerHTML = '<span class="empty-value">N/A</span>';
+      }
+
+      // Verdict
+      const verdictEl = document.getElementById('displayVerdict');
+      if (verdict && verdict !== '') {
+        verdictEl.textContent = verdict;
+        verdictEl.className = 'stat-value verdict-' + verdict.toLowerCase();
+      } else {
+        verdictEl.innerHTML = '<span class="empty-value">Pending</span>';
+      }
+
+      // Title
+      const titleEl = document.getElementById('displayTitle');
+      titleEl.textContent = title || '—';
+
+      // Reasoning
+      const reasonEl = document.getElementById('displayReasoning');
+      if (reasoning && reasoning !== '') {
+        reasonEl.textContent = reasoning;
+      } else {
+        reasonEl.innerHTML = '<span class="empty-value">Not evaluated yet</span>';
+      }
+
+      log('State refreshed ✓', 'ok');
+    } catch (err) {
+      log('Error reading state: ' + err.message, 'err');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // EXPOSED ACTIONS (called from HTML onclick)
+  // ─────────────────────────────────────────────────────────
+
+  window.loadContract = async function () {
+    const addrInput = document.getElementById('contractAddress').value.trim();
+    if (!addrInput) {
+      log('Please enter a contract address.', 'err');
+      return;
+    }
+
+    contractAddress = addrInput;
+    log(`Loading contract at ${contractAddress}…`, 'info');
+
+    try {
+      await getClient();
+      await refreshState();
+
+      // Show info section and enable actions
+      document.getElementById('contractInfo').style.display = 'block';
+      document.getElementById('actionsPanel').style.opacity = '1';
+      document.getElementById('actionsPanel').style.pointerEvents = 'auto';
+      log('Contract loaded successfully ✓', 'ok');
+    } catch (err) {
+      log('Failed to load contract: ' + err.message, 'err');
+    }
+  };
+
+  window.refreshState = refreshState;
+
+  window.acceptJob = async function () {
+    if (!contractAddress) return;
+    try {
+      log('Calling accept_job()…', 'info');
+      await writeContract('accept_job');
+      await refreshState();
+    } catch (err) {
+      log('accept_job failed: ' + err.message, 'err');
+    }
+  };
+
+  window.submitWork = async function () {
+    const proof = document.getElementById('proofInput').value.trim();
+    if (!proof || proof.length < 6) {
+      log('Proof of work must be at least 6 characters.', 'err');
+      return;
+    }
+    if (!contractAddress) return;
+    try {
+      log('Calling submit_work()…', 'info');
+      await writeContract('submit_work', [proof]);
+      await refreshState();
+    } catch (err) {
+      log('submit_work failed: ' + err.message, 'err');
+    }
+  };
+
+  window.evaluate = async function () {
+    if (!contractAddress) return;
+    try {
+      log('Calling evaluate() — AI is reasoning about the proof…', 'info');
+      log('This may take 10-30s on testnet.', 'warn');
+      await writeContract('evaluate');
+      await refreshState();
+    } catch (err) {
+      log('evaluate failed: ' + err.message, 'err');
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────
+  // Boot
+  // ─────────────────────────────────────────────────────────
+  log('Interface ready · enter contract address above ↑', 'info');
+</script>
+</body>
+</html>
